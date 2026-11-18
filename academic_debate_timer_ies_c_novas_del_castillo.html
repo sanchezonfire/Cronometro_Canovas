@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Academic Debate Timer — IES Cánovas del Castillo</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter & JetBrains Mono for ultra-legible tabular numerals -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            canovas: {
+              navy: '#0A365C',
+              teal: '#009E8E',
+              gold: '#F4C150',
+              lightTeal: '#4DB6AC'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Ensure crisp tabular numerals so digits never jitter while counting */
+    .tabular-timer {
+      font-variant-numeric: tabular-nums;
+      font-feature-settings: "tnum" 1;
+    }
+
+    /* Subtle pulse animation for overtime indicator */
+    @keyframes overtimePulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.65; }
+    }
+    .animate-overtime {
+      animation: overtimePulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    /* Custom scrollbar hide for horizontal tab bar on smaller screens */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-900 font-sans min-h-screen flex flex-col select-none antialiased">
+
+  <!-- TOP 8-TAB NAVIGATION BAR (Inspired by classic browser/debate tab strip) -->
+  <nav aria-label="Debate Stages" class="bg-slate-200/90 border-b border-slate-300 pt-2 px-2 sm:px-4 shadow-sm">
+    <div id="tabs-container" class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-1.5 max-w-[1600px] mx-auto">
+      <!-- Tabs will be rendered dynamically by JavaScript -->
+    </div>
+  </nav>
+
+  <!-- MAIN WORKSPACE -->
+  <main class="flex-1 flex flex-col justify-between max-w-[1500px] w-full mx-auto px-4 sm:px-8 py-5 sm:py-7">
+
+    <!-- HEADER ROW: IES Cánovas del Castillo Logo (Left) + Academic Debate Title (Center) + Sound Toggle (Right) -->
+    <header class="grid grid-cols-1 md:grid-cols-3 items-center gap-4 pb-2">
+      <!-- Left: Custom Vector Recreation of IES Cánovas del Castillo Logo -->
+      <div class="flex items-center justify-center md:justify-start">
+        <div class="inline-flex items-center gap-3.5 bg-white/80 backdrop-blur-sm px-4 py-2.5 rounded-2xl border border-slate-200/80 shadow-sm">
+          <!-- Geometric Mosaic "C" SVG matching the uploaded branding -->
+          <svg class="w-12 h-14 sm:w-14 sm:h-16 shrink-0" viewBox="0 0 120 140" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="IES Cánovas del Castillo Logo">
+            <!-- Top Row -->
+            <polygon points="35,5 35,35 5,35" fill="#009E8E"/>
+            <rect x="38" y="5" width="38" height="30" fill="#0A365C"/>
+            <polygon points="62,5 76,5 76,16" fill="#F4C150"/>
+            <polygon points="79,5 115,35 79,35" fill="#0A365C"/>
+            <polygon points="79,5 115,5 115,32" fill="#009E8E" opacity="0.25"/>
+            <!-- Upper Middle Row -->
+            <polygon points="5,38 35,68 5,68" fill="#F4C150"/>
+            <polygon points="5,38 35,38 35,65" fill="#0A365C"/>
+            <polygon points="38,38 56,38 38,54" fill="#009E8E"/>
+            <polygon points="58,38 76,38 76,54" fill="#0A365C"/>
+            <polygon points="79,38 115,38 102,52 79,52" fill="#F4C150"/>
+            <!-- Center Left Spine -->
+            <polygon points="20,56 35,70 20,84 5,70" fill="#009E8E"/>
+            <!-- Lower Middle Row -->
+            <polygon points="5,73 35,102 5,102" fill="#0A365C"/>
+            <polygon points="35,73 35,98 18,86" fill="#F4C150"/>
+            <polygon points="38,86 56,102 38,102" fill="#009E8E"/>
+            <polygon points="76,86 76,102 58,102" fill="#0A365C"/>
+            <polygon points="79,88 102,88 115,102 79,102" fill="#F4C150"/>
+            <!-- Bottom Row -->
+            <polygon points="5,105 35,105 35,135" fill="#009E8E"/>
+            <polygon points="38,105 60,105 38,125" fill="#0A365C"/>
+            <polygon points="38,127 46,135 38,135" fill="#F4C150"/>
+            <polygon points="62,105 76,105 76,135 42,135 42,126" fill="#009E8E"/>
+            <polygon points="79,105 115,105 79,135" fill="#0A365C"/>
+          </svg>
+
+          <!-- Typography Block -->
+          <div class="flex flex-col leading-none">
+            <span class="text-2xl sm:text-[28px] font-black tracking-tight text-canovas-navy">
+              CÁNOVAS
+            </span>
+            <span class="text-[11px] sm:text-xs font-semibold tracking-[0.09em] text-canovas-teal mt-1">
+              IES CÁNOVAS DEL CASTILLO
+            </span>
+            <span class="text-[10px] sm:text-[11px] font-extrabold tracking-[0.18em] text-canovas-navy mt-1 text-center">
+              MÁLAGA
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Center: Main Title -->
+      <div class="text-center">
+        <h1 id="main-title" class="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-slate-900">
+          Academic Debate
+        </h1>
+        <p id="main-subtitle" class="text-xs sm:text-sm font-medium text-slate-500 mt-1">
+          Official Stage Timekeeper
+        </p>
+      </div>
+
+      <!-- Right: Language Switcher & Bell Sound Toggle -->
+      <div class="flex flex-wrap items-center justify-center md:justify-end gap-2">
+        <!-- Multi-language Selector -->
+        <div
+          id="lang-switcher"
+          role="group"
+          aria-label="Language selector"
+          class="inline-flex items-center bg-white p-1 rounded-xl border border-slate-300 shadow-sm"
+        >
+          <button
+            type="button"
+            data-lang="en"
+            onclick="setLanguage('en')"
+            class="lang-btn px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer bg-canovas-navy text-white"
+            title="English"
+          >EN</button>
+          <button
+            type="button"
+            data-lang="es"
+            onclick="setLanguage('es')"
+            class="lang-btn px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer text-slate-600 hover:text-slate-900"
+            title="Español"
+          >ES</button>
+          <button
+            type="button"
+            data-lang="fr"
+            onclick="setLanguage('fr')"
+            class="lang-btn px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer text-slate-600 hover:text-slate-900"
+            title="Français"
+          >FR</button>
+          <button
+            type="button"
+            data-lang="de"
+            onclick="setLanguage('de')"
+            class="lang-btn px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer text-slate-600 hover:text-slate-900"
+            title="Deutsch"
+          >DE</button>
+        </div>
+
+        <!-- Sound Chime Toggle -->
+        <button
+          id="sound-toggle-btn"
+          type="button"
+          onclick="toggleSound()"
+          title="Bell sound"
+          class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs sm:text-sm font-semibold shadow-sm transition cursor-pointer"
+        >
+          <span id="sound-icon">🔔</span>
+          <span id="sound-label">Bell sound: ON</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- CENTER STAGE: ACTIVE TURN HEADING + MASSIVE DIGITAL TIMER -->
+    <section class="my-auto flex flex-col items-center justify-center py-4 sm:py-6">
+      <!-- Active Stage & Team Subtitle -->
+      <div class="flex flex-col items-center gap-2 mb-3 sm:mb-5 text-center">
+        <div class="inline-flex items-center gap-2">
+          <span id="team-badge" class="px-3 py-1 rounded-full text-xs sm:text-sm font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-200">
+            Team In Favor
+          </span>
+          <span id="status-badge" class="px-3 py-1 rounded-full text-xs sm:text-sm font-bold uppercase tracking-wider bg-slate-200 text-slate-700">
+            Ready
+          </span>
+        </div>
+
+        <h2 id="stage-heading" class="text-2xl sm:text-4xl lg:text-5xl font-bold text-slate-800 tracking-tight mt-1">
+          Introduction. Team In Favor.
+        </h2>
+      </div>
+
+      <!-- Timer Card -->
+      <div
+        id="timer-card"
+        class="w-full max-w-4xl bg-white rounded-3xl border-2 border-slate-200/90 shadow-xl px-6 py-8 sm:py-12 flex flex-col items-center justify-center transition-colors duration-300"
+      >
+        <!-- Overtime Banner (Hidden until timer passes 00:00) -->
+        <div
+          id="overtime-banner"
+          class="hidden items-center gap-2 px-4 py-1.5 mb-2 rounded-full bg-red-100 border border-red-300 text-red-700 font-extrabold text-xs sm:text-sm uppercase tracking-widest animate-overtime"
+        >
+          <span id="overtime-banner-text">⏱ OVERTIME</span>
+        </div>
+
+        <!-- Giant Clock Readout -->
+        <div class="flex items-center justify-center">
+          <span
+            id="overtime-plus"
+            class="hidden font-mono font-extrabold text-4xl sm:text-6xl md:text-7xl text-red-600 mr-1 sm:mr-2 select-none"
+          >+</span>
+          <div
+            id="timer-display"
+            aria-live="polite"
+            class="tabular-timer font-mono font-extrabold text-[5.25rem] sm:text-[8.5rem] md:text-[10.5rem] lg:text-[12rem] leading-none tracking-tight text-canovas-navy transition-colors duration-200"
+          >
+            04:00
+          </div>
+        </div>
+
+        <!-- Subtle Visual Progress Bar -->
+        <div class="w-full max-w-xl h-2.5 bg-slate-100 rounded-full overflow-hidden mt-6 sm:mt-8 border border-slate-200/80">
+          <div
+            id="progress-bar"
+            class="h-full bg-canovas-teal transition-all duration-300 rounded-full"
+            style="width: 100%"
+          ></div>
+        </div>
+      </div>
+
+      <!-- PRIMARY ACTION BUTTONS: Start / Pause / Resume & Reset -->
+      <div class="flex flex-wrap items-center justify-center gap-3 sm:gap-5 mt-6 sm:mt-8">
+        <button
+          id="btn-start"
+          type="button"
+          onclick="startTimer()"
+          class="min-w-[145px] sm:min-w-[175px] px-7 py-3.5 sm:py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-bold text-lg sm:text-xl shadow-lg shadow-emerald-600/20 border border-emerald-700 transition cursor-pointer flex items-center justify-center gap-2.5"
+        >
+          <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+          <span id="btn-start-label">Start</span>
+        </button>
+
+        <button
+          id="btn-stop"
+          type="button"
+          onclick="stopTimer()"
+          class="min-w-[145px] sm:min-w-[175px] px-7 py-3.5 sm:py-4 rounded-2xl bg-amber-600 hover:bg-amber-700 active:scale-[0.98] text-white font-bold text-lg sm:text-xl shadow-lg shadow-amber-600/20 border border-amber-700 transition cursor-pointer flex items-center justify-center gap-2.5"
+        >
+          <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>
+          <span id="btn-stop-label">Pause</span>
+        </button>
+
+        <button
+          id="btn-reset"
+          type="button"
+          onclick="resetCurrentTimer()"
+          class="min-w-[145px] sm:min-w-[175px] px-7 py-3.5 sm:py-4 rounded-2xl bg-red-700 hover:bg-red-800 active:scale-[0.98] text-white font-bold text-lg sm:text-xl shadow-lg shadow-red-700/20 border border-red-800 transition cursor-pointer flex items-center justify-center gap-2.5"
+        >
+          <svg class="w-5 h-5 fill-none stroke-current stroke-2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h5M20 20v-5h-5M4 9a9 9 0 0114.65-3.35L20 7M20 15a9 9 0 01-14.65 3.35L4 17"/>
+          </svg>
+          <span id="btn-reset-label">Reset</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- FOOTER / CONFIGURATION BAR: Programmable Initial Minutes & Seconds per Tab -->
+    <footer class="pt-3 border-t border-slate-200/90 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-slate-600">
+      <!-- Programmable Time Controls -->
+      <div class="flex flex-wrap items-center justify-center sm:justify-start gap-3 bg-white px-4 py-2.5 rounded-2xl border border-slate-300 shadow-sm">
+        <label id="label-initial-minutes" for="input-minutes" class="font-semibold text-slate-800">
+          Initial value in minutes:
+        </label>
+        <div class="flex items-center gap-1.5">
+          <input
+            id="input-minutes"
+            type="number"
+            min="0"
+            max="99"
+            value="4"
+            aria-label="Initial minutes"
+            class="w-20 px-3 py-1.5 text-center font-mono font-bold text-base text-slate-900 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-canovas-teal focus:border-canovas-teal"
+          />
+          <span id="unit-min" class="text-slate-500 font-medium">min</span>
+        </div>
+
+        <div class="flex items-center gap-1.5">
+          <input
+            id="input-seconds"
+            type="number"
+            min="0"
+            max="59"
+            value="0"
+            aria-label="Initial seconds"
+            class="w-20 px-3 py-1.5 text-center font-mono font-bold text-base text-slate-900 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-canovas-teal focus:border-canovas-teal"
+          />
+          <span id="unit-sec" class="text-slate-500 font-medium">sec</span>
+        </div>
+
+        <button
+          id="btn-apply-all"
+          type="button"
+          onclick="applyCustomTimeToAll()"
+          title="Apply this duration to all 8 tabs"
+          class="ml-1 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs border border-slate-300 transition cursor-pointer"
+        >
+          Apply to all tabs
+        </button>
+      </div>
+
+      <!-- Keyboard Shortcuts Legend -->
+      <div class="flex flex-wrap items-center justify-center gap-4 text-xs text-slate-500">
+        <span><kbd class="px-2 py-0.5 bg-white border border-slate-300 rounded font-mono font-semibold text-slate-700">Space</kbd> <span id="shortcut-space">Start / Pause</span></span>
+        <span><kbd class="px-2 py-0.5 bg-white border border-slate-300 rounded font-mono font-semibold text-slate-700">R</kbd> <span id="shortcut-reset">Reset</span></span>
+        <span><kbd class="px-2 py-0.5 bg-white border border-slate-300 rounded font-mono font-semibold text-slate-700">← / →</kbd> <span id="shortcut-tabs">Switch Tab</span></span>
+      </div>
+    </footer>
+  </main>
+
+  <script>
+    /**
+     * Academic Debate Timer Application (Multi-language: EN, ES, FR, DE)
+     * - 8 independent tabs corresponding to the exact 8 stages of an Academic Debate.
+     * - Each tab stores its own programmable duration (minutes & seconds), remaining/elapsed time,
+     *   running state, and overtime status.
+     * - Switching languages dynamically updates all UI text while keeping running timers intact.
+     * - When countdown reaches 00:00, it switches to bright RED and counts UP (+00:01, +00:02...)
+     *   to track excess speaking time.
+     */
+
+    // Complete translations dictionary for EN, ES, FR, DE
+    const I18N = {
+      en: {
+        pageTitle: "Academic Debate Timer — IES Cánovas del Castillo",
+        mainTitle: "Academic Debate",
+        mainSubtitle: "Official Stage Timekeeper",
+        teamInFavor: "Team In Favor",
+        teamAgainst: "Team Against",
+        statusReady: "Ready",
+        statusCounting: "Counting Down",
+        statusPaused: "Paused",
+        statusOvertimeRunning: "OVERTIME",
+        statusOvertimePaused: "OVERTIME (PAUSED)",
+        overtimeBanner: "⏱ OVERTIME",
+        btnStart: "Start",
+        btnResume: "Resume",
+        btnPause: "Pause",
+        btnReset: "Reset",
+        labelInitialMinutes: "Initial value in minutes:",
+        unitMin: "min",
+        unitSec: "sec",
+        applyAll: "Apply to all tabs",
+        soundLabel: "Bell sound",
+        soundOn: "ON",
+        soundOff: "OFF",
+        shortcutSpace: "Start / Pause",
+        shortcutReset: "Reset",
+        shortcutTabs: "Switch Tab",
+        stages: [
+          { tabLine1: "Introduction.", tabLine2: "In Favor", heading: "Introduction. Team In Favor." },
+          { tabLine1: "Introduction.", tabLine2: "Against", heading: "Introduction. Team Against." },
+          { tabLine1: "Rebuttal 1.", tabLine2: "In Favor", heading: "Rebuttal 1. Team In Favor." },
+          { tabLine1: "Rebuttal 1.", tabLine2: "Against", heading: "Rebuttal 1. Team Against." },
+          { tabLine1: "Rebuttal 2.", tabLine2: "In Favor", heading: "Rebuttal 2. Team In Favor." },
+          { tabLine1: "Rebuttal 2.", tabLine2: "Against", heading: "Rebuttal 2. Team Against." },
+          { tabLine1: "Conclusion.", tabLine2: "Against", heading: "Conclusion. Team Against." },
+          { tabLine1: "Conclusion.", tabLine2: "In Favor", heading: "Conclusion. Team In Favor." }
+        ]
+      },
+      es: {
+        pageTitle: "Cronómetro Debate Académico — IES Cánovas del Castillo",
+        mainTitle: "Debate Académico",
+        mainSubtitle: "Cronómetro Oficial de Turnos",
+        teamInFavor: "Equipo A Favor",
+        teamAgainst: "Equipo En Contra",
+        statusReady: "Listo",
+        statusCounting: "En curso",
+        statusPaused: "En pausa",
+        statusOvertimeRunning: "TIEMPO EXCEDIDO",
+        statusOvertimePaused: "TIEMPO EXCEDIDO (PAUSA)",
+        overtimeBanner: "⏱ TIEMPO EXCEDIDO",
+        btnStart: "Inicio",
+        btnResume: "Reanudar",
+        btnPause: "Pausa",
+        btnReset: "Reiniciar",
+        labelInitialMinutes: "Valor inicial de los minutos:",
+        unitMin: "min",
+        unitSec: "seg",
+        applyAll: "Aplicar a todas",
+        soundLabel: "Sonido de campana",
+        soundOn: "SÍ",
+        soundOff: "NO",
+        shortcutSpace: "Inicio / Pausa",
+        shortcutReset: "Reiniciar",
+        shortcutTabs: "Cambiar pestaña",
+        stages: [
+          { tabLine1: "Introducción.", tabLine2: "A Favor", heading: "Introducción. Equipo A Favor." },
+          { tabLine1: "Introducción.", tabLine2: "En Contra", heading: "Introducción. Equipo En Contra." },
+          { tabLine1: "Refutación 1.", tabLine2: "A Favor", heading: "Refutación 1. Equipo A Favor." },
+          { tabLine1: "Refutación 1.", tabLine2: "En Contra", heading: "Refutación 1. Equipo En Contra." },
+          { tabLine1: "Refutación 2.", tabLine2: "A Favor", heading: "Refutación 2. Equipo A Favor." },
+          { tabLine1: "Refutación 2.", tabLine2: "En Contra", heading: "Refutación 2. Equipo En Contra." },
+          { tabLine1: "Conclusión.", tabLine2: "En Contra", heading: "Conclusión. Equipo En Contra." },
+          { tabLine1: "Conclusión.", tabLine2: "A Favor", heading: "Conclusión. Equipo A Favor." }
+        ]
+      },
+      fr: {
+        pageTitle: "Chronomètre Débat Académique — IES Cánovas del Castillo",
+        mainTitle: "Débat Académique",
+        mainSubtitle: "Chronomètre Officiel des Tours",
+        teamInFavor: "Équipe Pour",
+        teamAgainst: "Équipe Contre",
+        statusReady: "Prêt",
+        statusCounting: "En cours",
+        statusPaused: "En pause",
+        statusOvertimeRunning: "TEMPS DÉPASSÉ",
+        statusOvertimePaused: "TEMPS DÉPASSÉ (PAUSE)",
+        overtimeBanner: "⏱ TEMPS DÉPASSÉ",
+        btnStart: "Démarrer",
+        btnResume: "Reprendre",
+        btnPause: "Pause",
+        btnReset: "Réinitialiser",
+        labelInitialMinutes: "Valeur initiale des minutes :",
+        unitMin: "min",
+        unitSec: "sec",
+        applyAll: "Appliquer à tous",
+        soundLabel: "Son de cloche",
+        soundOn: "OUI",
+        soundOff: "NON",
+        shortcutSpace: "Démarrer / Pause",
+        shortcutReset: "Réinitialiser",
+        shortcutTabs: "Changer d'onglet",
+        stages: [
+          { tabLine1: "Introduction.", tabLine2: "Pour", heading: "Introduction. Équipe Pour." },
+          { tabLine1: "Introduction.", tabLine2: "Contre", heading: "Introduction. Équipe Contre." },
+          { tabLine1: "Réfutation 1.", tabLine2: "Pour", heading: "Réfutation 1. Équipe Pour." },
+          { tabLine1: "Réfutation 1.", tabLine2: "Contre", heading: "Réfutation 1. Équipe Contre." },
+          { tabLine1: "Réfutation 2.", tabLine2: "Pour", heading: "Réfutation 2. Équipe Pour." },
+          { tabLine1: "Réfutation 2.", tabLine2: "Contre", heading: "Réfutation 2. Équipe Contre." },
+          { tabLine1: "Conclusion.", tabLine2: "Contre", heading: "Conclusion. Équipe Contre." },
+          { tabLine1: "Conclusion.", tabLine2: "Pour", heading: "Conclusion. Équipe Pour." }
+        ]
+      },
+      de: {
+        pageTitle: "Akademische Debatte Timer — IES Cánovas del Castillo",
+        mainTitle: "Akademische Debatte",
+        mainSubtitle: "Offizieller Runden-Timer",
+        teamInFavor: "Team Dafür",
+        teamAgainst: "Team Dagegen",
+        statusReady: "Bereit",
+        statusCounting: "Läuft",
+        statusPaused: "Pausiert",
+        statusOvertimeRunning: "ZEITÜBERSCHREITUNG",
+        statusOvertimePaused: "ZEITÜBERSCHREITUNG (PAUSE)",
+        overtimeBanner: "⏱ ZEITÜBERSCHREITUNG",
+        btnStart: "Start",
+        btnResume: "Fortsetzen",
+        btnPause: "Pause",
+        btnReset: "Zurücksetzen",
+        labelInitialMinutes: "Anfangswert in Minuten:",
+        unitMin: "Min.",
+        unitSec: "Sek.",
+        applyAll: "Auf alle anwenden",
+        soundLabel: "Glockenton",
+        soundOn: "EIN",
+        soundOff: "AUS",
+        shortcutSpace: "Start / Pause",
+        shortcutReset: "Zurücksetzen",
+        shortcutTabs: "Tab wechseln",
+        stages: [
+          { tabLine1: "Einleitung.", tabLine2: "Dafür", heading: "Einleitung. Team Dafür." },
+          { tabLine1: "Einleitung.", tabLine2: "Dagegen", heading: "Einleitung. Team Dagegen." },
+          { tabLine1: "Widerlegung 1.", tabLine2: "Dafür", heading: "Widerlegung 1. Team Dafür." },
+          { tabLine1: "Widerlegung 1.", tabLine2: "Dagegen", heading: "Widerlegung 1. Team Dagegen." },
+          { tabLine1: "Widerlegung 2.", tabLine2: "Dafür", heading: "Widerlegung 2. Team Dafür." },
+          { tabLine1: "Widerlegung 2.", tabLine2: "Dagegen", heading: "Widerlegung 2. Team Dagegen." },
+          { tabLine1: "Schlusswort.", tabLine2: "Dagegen", heading: "Schlusswort. Team Dagegen." },
+          { tabLine1: "Schlusswort.", tabLine2: "Dafür", heading: "Schlusswort. Team Dafür." }
+        ]
+      }
+    };
+
+    // Structural definition of the 8 debate stages (team affiliation & default durations)
+    const DEBATE_STAGES = [
+      { id: 0, team: "In Favor", defaultMinutes: 4, defaultSeconds: 0 },
+      { id: 1, team: "Against", defaultMinutes: 4, defaultSeconds: 0 },
+      { id: 2, team: "In Favor", defaultMinutes: 5, defaultSeconds: 0 },
+      { id: 3, team: "Against", defaultMinutes: 5, defaultSeconds: 0 },
+      { id: 4, team: "In Favor", defaultMinutes: 5, defaultSeconds: 0 },
+      { id: 5, team: "Against", defaultMinutes: 5, defaultSeconds: 0 },
+      { id: 6, team: "Against", defaultMinutes: 3, defaultSeconds: 0 },
+      { id: 7, team: "In Favor", defaultMinutes: 3, defaultSeconds: 0 }
+    ];
+
+    // State array for each of the 8 tabs
+    const tabStates = DEBATE_STAGES.map(stage => {
+      const total = stage.defaultMinutes * 60 + stage.defaultSeconds;
+      return {
+        initialMinutes: stage.defaultMinutes,
+        initialSeconds: stage.defaultSeconds,
+        initialTotalSeconds: total,
+        signedSeconds: total,
+        isRunning: false,
+        hasStartedOnce: false,
+        intervalId: null,
+        hasRungZeroBell: false
+      };
+    });
+
+    let activeTabIndex = 0;
+    let currentLang = "en";
+    let soundEnabled = true;
+
+    // DOM References
+    const tabsContainer = document.getElementById("tabs-container");
+    const mainTitleEl = document.getElementById("main-title");
+    const mainSubtitleEl = document.getElementById("main-subtitle");
+    const stageHeadingEl = document.getElementById("stage-heading");
+    const teamBadgeEl = document.getElementById("team-badge");
+    const statusBadgeEl = document.getElementById("status-badge");
+    const timerCardEl = document.getElementById("timer-card");
+    const timerDisplayEl = document.getElementById("timer-display");
+    const overtimeBannerEl = document.getElementById("overtime-banner");
+    const overtimeBannerTextEl = document.getElementById("overtime-banner-text");
+    const overtimePlusEl = document.getElementById("overtime-plus");
+    const progressBarEl = document.getElementById("progress-bar");
+    const inputMinutesEl = document.getElementById("input-minutes");
+    const inputSecondsEl = document.getElementById("input-seconds");
+    const btnStartEl = document.getElementById("btn-start");
+    const btnStartLabelEl = document.getElementById("btn-start-label");
+    const btnStopEl = document.getElementById("btn-stop");
+    const btnStopLabelEl = document.getElementById("btn-stop-label");
+    const btnResetLabelEl = document.getElementById("btn-reset-label");
+    const labelInitialMinutesEl = document.getElementById("label-initial-minutes");
+    const unitMinEl = document.getElementById("unit-min");
+    const unitSecEl = document.getElementById("unit-sec");
+    const btnApplyAllEl = document.getElementById("btn-apply-all");
+    const soundToggleBtnEl = document.getElementById("sound-toggle-btn");
+    const soundIconEl = document.getElementById("sound-icon");
+    const soundLabelEl = document.getElementById("sound-label");
+
+    /**
+     * Switches the active UI language without disturbing any running timers
+     */
+    function setLanguage(lang) {
+      if (!I18N[lang]) return;
+      currentLang = lang;
+      document.documentElement.lang = lang;
+
+      // Update active pill styling on the language selector
+      document.querySelectorAll(".lang-btn").forEach(btn => {
+        const isSelected = btn.getAttribute("data-lang") === lang;
+        if (isSelected) {
+          btn.className =
+            "lang-btn px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer bg-canovas-navy text-white shadow-xs";
+        } else {
+          btn.className =
+            "lang-btn px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer text-slate-600 hover:text-slate-900 hover:bg-slate-100";
+        }
+      });
+
+      updateDisplay();
+    }
+
+    /**
+     * Synthesizes a clean, pleasant acoustic bell chime using Web Audio API
+     * when the timer reaches 00:00 (no external audio files needed).
+     */
+    function playZeroBell() {
+      if (!soundEnabled) return;
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        const now = ctx.currentTime;
+
+        const frequencies = [880, 1318.5];
+        frequencies.forEach((freq, idx) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(freq, now + idx * 0.12);
+
+          gain.gain.setValueAtTime(0.001, now + idx * 0.12);
+          gain.gain.exponentialRampToValueAtTime(0.25, now + idx * 0.12 + 0.03);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.12 + 1.1);
+
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now + idx * 0.12);
+          osc.stop(now + idx * 0.12 + 1.15);
+        });
+      } catch (e) {
+        // Ignore audio errors if browser blocks autoplay before user interaction
+      }
+    }
+
+    function toggleSound() {
+      soundEnabled = !soundEnabled;
+      updateSoundUI();
+    }
+
+    function updateSoundUI() {
+      const t = I18N[currentLang];
+      soundIconEl.textContent = soundEnabled ? "🔔" : "🔕";
+      soundLabelEl.textContent = `${t.soundLabel}: ${soundEnabled ? t.soundOn : t.soundOff}`;
+      soundToggleBtnEl.title = t.soundLabel;
+    }
+
+    /**
+     * Formats a non-negative number of seconds as MM:SS
+     */
+    function formatMMSS(totalSec) {
+      const absSec = Math.abs(Math.floor(totalSec));
+      const mins = Math.floor(absSec / 60);
+      const secs = absSec % 60;
+      return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+    }
+
+    /**
+     * Renders the 8 top navigation tabs in the active language and highlights the active tab
+     */
+    function renderTabs() {
+      const t = I18N[currentLang];
+      tabsContainer.innerHTML = "";
+
+      DEBATE_STAGES.forEach((stage, index) => {
+        const stageText = t.stages[index];
+        const state = tabStates[index];
+        const isActive = index === activeTabIndex;
+        const isOvertime = state.signedSeconds < 0;
+
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.onclick = () => selectTab(index);
+        btn.setAttribute("role", "tab");
+        btn.setAttribute("aria-selected", isActive ? "true" : "false");
+
+        let baseClasses =
+          "relative flex flex-col items-start justify-center text-left px-3 py-2.5 rounded-t-xl border transition-all cursor-pointer ";
+        if (isActive) {
+          baseClasses +=
+            "bg-slate-100 border-slate-300 border-b-slate-100 text-slate-950 font-bold shadow-sm -mb-[1px] z-10";
+        } else {
+          baseClasses +=
+            "bg-slate-200/75 hover:bg-white/70 border-slate-300/80 text-slate-700 font-medium";
+        }
+
+        let statusDot = "";
+        if (isOvertime) {
+          statusDot = `<span class="inline-block w-2 h-2 rounded-full bg-red-600 animate-ping" title="${t.statusOvertimeRunning}"></span>`;
+        } else if (state.isRunning) {
+          statusDot = `<span class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse" title="${t.statusCounting}"></span>`;
+        }
+
+        btn.className = baseClasses;
+        btn.innerHTML = `
+          <div class="w-full flex items-center justify-between gap-1">
+            <span class="text-xs sm:text-[13px] leading-tight truncate">${stageText.tabLine1}</span>
+            ${statusDot}
+          </div>
+          <div class="w-full flex items-center justify-between gap-1 mt-0.5">
+            <span class="text-xs sm:text-[13px] leading-tight truncate ${isActive ? "text-canovas-navy font-extrabold" : "text-slate-600"}">
+              ${stageText.tabLine2}
+            </span>
+            <span class="text-[11px] font-mono ${isOvertime ? "text-red-600 font-bold" : "text-slate-500"}">
+              ${isOvertime ? "+" : ""}${formatMMSS(state.signedSeconds)}
+            </span>
+          </div>
+        `;
+
+        tabsContainer.appendChild(btn);
+      });
+    }
+
+    /**
+     * Switches to the selected tab (0..7)
+     */
+    function selectTab(index) {
+      activeTabIndex = index;
+      const state = tabStates[activeTabIndex];
+      inputMinutesEl.value = state.initialMinutes;
+      inputSecondsEl.value = state.initialSeconds;
+      updateDisplay();
+    }
+
+    /**
+     * Updates all translated labels, main stage heading, digital clock color/digits, and button states
+     */
+    function updateDisplay() {
+      const t = I18N[currentLang];
+      const stage = DEBATE_STAGES[activeTabIndex];
+      const stageText = t.stages[activeTabIndex];
+      const state = tabStates[activeTabIndex];
+      const isOvertime = state.signedSeconds < 0;
+      const isAtZero = state.signedSeconds === 0;
+
+      // Update Global Header, Controls & Footer Labels in selected language
+      document.title = t.pageTitle;
+      mainTitleEl.textContent = t.mainTitle;
+      mainSubtitleEl.textContent = t.mainSubtitle;
+      overtimeBannerTextEl.textContent = t.overtimeBanner;
+      btnStopLabelEl.textContent = t.btnPause;
+      btnResetLabelEl.textContent = t.btnReset;
+      labelInitialMinutesEl.textContent = t.labelInitialMinutes;
+      unitMinEl.textContent = t.unitMin;
+      unitSecEl.textContent = t.unitSec;
+      btnApplyAllEl.textContent = t.applyAll;
+      document.getElementById("shortcut-space").textContent = t.shortcutSpace;
+      document.getElementById("shortcut-reset").textContent = t.shortcutReset;
+      document.getElementById("shortcut-tabs").textContent = t.shortcutTabs;
+      updateSoundUI();
+
+      // Start vs Resume button label depending on whether timer was paused mid-run
+      const isPausedMidRun = !state.isRunning && state.hasStartedOnce && state.signedSeconds !== state.initialTotalSeconds;
+      btnStartLabelEl.textContent = isPausedMidRun ? t.btnResume : t.btnStart;
+
+      // Update Heading & Team Badge
+      stageHeadingEl.textContent = stageText.heading;
+      if (stage.team === "In Favor") {
+        teamBadgeEl.textContent = t.teamInFavor;
+        teamBadgeEl.className =
+          "px-3.5 py-1 rounded-full text-xs sm:text-sm font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-300";
+      } else {
+        teamBadgeEl.textContent = t.teamAgainst;
+        teamBadgeEl.className =
+          "px-3.5 py-1 rounded-full text-xs sm:text-sm font-bold uppercase tracking-wider bg-sky-100 text-sky-900 border border-sky-300";
+      }
+
+      // Update Running Status Badge
+      if (isOvertime) {
+        statusBadgeEl.textContent = state.isRunning ? t.statusOvertimeRunning : t.statusOvertimePaused;
+        statusBadgeEl.className =
+          "px-3.5 py-1 rounded-full text-xs sm:text-sm font-bold uppercase tracking-wider bg-red-100 text-red-700 border border-red-300";
+      } else if (state.isRunning) {
+        statusBadgeEl.textContent = t.statusCounting;
+        statusBadgeEl.className =
+          "px-3.5 py-1 rounded-full text-xs sm:text-sm font-bold uppercase tracking-wider bg-emerald-600 text-white";
+      } else {
+        statusBadgeEl.textContent =
+          state.signedSeconds === state.initialTotalSeconds ? t.statusReady : t.statusPaused;
+        statusBadgeEl.className =
+          "px-3.5 py-1 rounded-full text-xs sm:text-sm font-bold uppercase tracking-wider bg-slate-200 text-slate-700";
+      }
+
+      // Format Clock Digits
+      timerDisplayEl.textContent = formatMMSS(state.signedSeconds);
+
+      // Visual Styling: Normal Countdown vs Final Warning vs Overtime (RED Count-Up)
+      if (isOvertime) {
+        timerDisplayEl.className =
+          "tabular-timer font-mono font-extrabold text-[5.25rem] sm:text-[8.5rem] md:text-[10.5rem] lg:text-[12rem] leading-none tracking-tight text-red-600 transition-colors duration-200";
+        timerCardEl.className =
+          "w-full max-w-4xl bg-red-50/60 rounded-3xl border-2 border-red-400 shadow-xl shadow-red-500/10 px-6 py-8 sm:py-12 flex flex-col items-center justify-center transition-colors duration-300";
+        overtimeBannerEl.classList.remove("hidden");
+        overtimeBannerEl.classList.add("flex");
+        overtimePlusEl.classList.remove("hidden");
+        progressBarEl.style.width = "100%";
+        progressBarEl.className = "h-full bg-red-600 transition-all duration-300 rounded-full";
+      } else {
+        overtimeBannerEl.classList.add("hidden");
+        overtimeBannerEl.classList.remove("flex");
+        overtimePlusEl.classList.add("hidden");
+
+        const isLastSeconds =
+          (state.signedSeconds <= 15 && state.initialTotalSeconds > 15 && state.signedSeconds > 0) ||
+          isAtZero;
+
+        if (isAtZero) {
+          timerDisplayEl.className =
+            "tabular-timer font-mono font-extrabold text-[5.25rem] sm:text-[8.5rem] md:text-[10.5rem] lg:text-[12rem] leading-none tracking-tight text-red-600 transition-colors duration-200";
+        } else if (isLastSeconds) {
+          timerDisplayEl.className =
+            "tabular-timer font-mono font-extrabold text-[5.25rem] sm:text-[8.5rem] md:text-[10.5rem] lg:text-[12rem] leading-none tracking-tight text-amber-600 transition-colors duration-200";
+        } else {
+          timerDisplayEl.className =
+            "tabular-timer font-mono font-extrabold text-[5.25rem] sm:text-[8.5rem] md:text-[10.5rem] lg:text-[12rem] leading-none tracking-tight text-canovas-navy transition-colors duration-200";
+        }
+
+        timerCardEl.className =
+          "w-full max-w-4xl bg-white rounded-3xl border-2 border-slate-200/90 shadow-xl px-6 py-8 sm:py-12 flex flex-col items-center justify-center transition-colors duration-300";
+
+        const pct =
+          state.initialTotalSeconds > 0
+            ? Math.max(0, Math.min(100, (state.signedSeconds / state.initialTotalSeconds) * 100))
+            : 0;
+        progressBarEl.style.width = `${pct}%`;
+        progressBarEl.className = isLastSeconds
+          ? "h-full bg-amber-500 transition-all duration-300 rounded-full"
+          : "h-full bg-canovas-teal transition-all duration-300 rounded-full";
+      }
+
+      // Button active/disabled visual feedback
+      if (state.isRunning) {
+        btnStartEl.classList.add("opacity-60", "ring-2", "ring-emerald-400");
+        btnStopEl.classList.remove("opacity-60");
+      } else {
+        btnStartEl.classList.remove("opacity-60", "ring-2", "ring-emerald-400");
+        btnStopEl.classList.add("opacity-95");
+      }
+
+      renderTabs();
+    }
+
+    /**
+     * Starts or resumes the timer for the currently active tab
+     */
+    function startTimer() {
+      const state = tabStates[activeTabIndex];
+      if (state.isRunning) return;
+
+      state.isRunning = true;
+      state.hasStartedOnce = true;
+
+      state.intervalId = setInterval(() => {
+        state.signedSeconds -= 1;
+
+        if (state.signedSeconds === 0 && !state.hasRungZeroBell) {
+          state.hasRungZeroBell = true;
+          playZeroBell();
+        }
+
+        if (tabStates[activeTabIndex] === state) {
+          updateDisplay();
+        } else {
+          renderTabs();
+        }
+      }, 1000);
+
+      updateDisplay();
+    }
+
+    /**
+     * Pauses the timer for the currently active tab
+     */
+    function stopTimer() {
+      const state = tabStates[activeTabIndex];
+      if (!state.isRunning) return;
+
+      clearInterval(state.intervalId);
+      state.intervalId = null;
+      state.isRunning = false;
+      updateDisplay();
+    }
+
+    /**
+     * Resets the current tab's timer back to its programmed initial minutes & seconds
+     */
+    function resetCurrentTimer() {
+      const state = tabStates[activeTabIndex];
+      if (state.intervalId) {
+        clearInterval(state.intervalId);
+        state.intervalId = null;
+      }
+      state.isRunning = false;
+      state.hasStartedOnce = false;
+      state.hasRungZeroBell = false;
+      state.signedSeconds = state.initialTotalSeconds;
+      updateDisplay();
+    }
+
+    /**
+     * Reads the minutes & seconds inputs and updates the active tab's initial duration
+     */
+    function handleDurationInputChange() {
+      let mins = parseInt(inputMinutesEl.value, 10);
+      let secs = parseInt(inputSecondsEl.value, 10);
+
+      if (isNaN(mins) || mins < 0) mins = 0;
+      if (mins > 99) mins = 99;
+      if (isNaN(secs) || secs < 0) secs = 0;
+      if (secs > 59) secs = 59;
+
+      const state = tabStates[activeTabIndex];
+      state.initialMinutes = mins;
+      state.initialSeconds = secs;
+      state.initialTotalSeconds = mins * 60 + secs;
+
+      if (state.intervalId) {
+        clearInterval(state.intervalId);
+        state.intervalId = null;
+      }
+      state.isRunning = false;
+      state.hasStartedOnce = false;
+      state.hasRungZeroBell = false;
+      state.signedSeconds = state.initialTotalSeconds;
+      updateDisplay();
+    }
+
+    /**
+     * Applies the current minutes/seconds input values to all 8 tabs at once
+     */
+    function applyCustomTimeToAll() {
+      let mins = parseInt(inputMinutesEl.value, 10);
+      let secs = parseInt(inputSecondsEl.value, 10);
+
+      if (isNaN(mins) || mins < 0) mins = 0;
+      if (mins > 99) mins = 99;
+      if (isNaN(secs) || secs < 0) secs = 0;
+      if (secs > 59) secs = 59;
+
+      inputMinutesEl.value = mins;
+      inputSecondsEl.value = secs;
+
+      const total = mins * 60 + secs;
+      tabStates.forEach(state => {
+        if (state.intervalId) {
+          clearInterval(state.intervalId);
+          state.intervalId = null;
+        }
+        state.isRunning = false;
+        state.hasStartedOnce = false;
+        state.hasRungZeroBell = false;
+        state.initialMinutes = mins;
+        state.initialSeconds = secs;
+        state.initialTotalSeconds = total;
+        state.signedSeconds = total;
+      });
+
+      updateDisplay();
+    }
+
+    // Event listeners for programmable inputs
+    inputMinutesEl.addEventListener("input", handleDurationInputChange);
+    inputSecondsEl.addEventListener("input", handleDurationInputChange);
+
+    // Keyboard shortcuts for convenient classroom / smartboard operation
+    document.addEventListener("keydown", (e) => {
+      // Avoid triggering shortcuts while typing inside number inputs
+      if (document.activeElement === inputMinutesEl || document.activeElement === inputSecondsEl) {
+        if (e.key === "Enter") {
+          document.activeElement.blur();
+        }
+        return;
+      }
+
+      if (e.code === "Space") {
+        e.preventDefault();
+        const state = tabStates[activeTabIndex];
+        if (state.isRunning) {
+          stopTimer();
+        } else {
+          startTimer();
+        }
+      } else if (e.key === "r" || e.key === "R") {
+        e.preventDefault();
+        resetCurrentTimer();
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        selectTab((activeTabIndex + 1) % DEBATE_STAGES.length);
+      } else if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        selectTab((activeTabIndex - 1 + DEBATE_STAGES.length) % DEBATE_STAGES.length);
+      }
+    });
+
+    // Initialize UI on load
+    window.addEventListener("DOMContentLoaded", () => {
+      selectTab(0);
+    });
+  </script>
+</body>
+</html>
