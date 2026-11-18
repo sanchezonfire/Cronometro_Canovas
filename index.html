@@ -19,10 +19,10 @@
       --border-color: #cbd5e1;
       --green-btn: #16a34a;
       --green-btn-hover: #15803d;
-      --red-btn: #dc2626;
-      --red-btn-hover: #b91c1c;
       --amber-btn: #d97706;
       --amber-btn-hover: #b45309;
+      --red-btn: #dc2626;
+      --red-btn-hover: #b91c1c;
       --overtime-red: #dc2626;
       --overtime-bg: #fef2f2;
     }
@@ -159,7 +159,6 @@
       display: flex;
       justify-content: flex-end;
       align-items: center;
-      gap: 8px;
     }
 
     .lang-select {
@@ -284,7 +283,7 @@
       background-color: var(--overtime-red);
     }
 
-    /* Main Action Buttons (Large Touch Targets) */
+    /* 3 Action Buttons */
     .controls-row {
       display: flex;
       flex-wrap: wrap;
@@ -442,10 +441,10 @@
 
       <div class="lang-wrapper">
         <select id="lang-select" class="lang-select" aria-label="Language">
-          <option value="en">🇬🇧 English</option>
-          <option value="es">🇪🇸 Español</option>
-          <option value="fr">🇫🇷 Français</option>
-          <option value="de">🇩🇪 Deutsch</option>
+          <option value="en">English</option>
+          <option value="es">Español</option>
+          <option value="fr">Français</option>
+          <option value="de">Deutsch</option>
         </select>
       </div>
     </header>
@@ -463,8 +462,10 @@
         <div class="progress-fill" id="progress-bar"></div>
       </div>
 
+      <!-- 3 Buttons: Start, Pause, Reset -->
       <div class="controls-row">
         <button class="btn btn-start" id="btn-start">Start</button>
+        <button class="btn btn-pause" id="btn-pause">Pause</button>
         <button class="btn btn-reset" id="btn-reset">Reset</button>
       </div>
 
@@ -492,7 +493,6 @@
         overtime: "OVERTIME",
         start: "Start",
         pause: "Pause",
-        resume: "Resume",
         reset: "Reset",
         initialLabel: "Initial time:",
         minUnit: "min",
@@ -514,9 +514,8 @@
         overtime: "TIEMPO EXCEDIDO",
         start: "Inicio",
         pause: "Pausa",
-        resume: "Reanudar",
-        reset: "Reiniciar",
-        initialLabel: "Tiempo inicial:",
+        reset: "Fin",
+        initialLabel: "Valor Inicial de los minutos:",
         minUnit: "min",
         secUnit: "seg",
         setTime: "Aplicar",
@@ -534,10 +533,9 @@
       fr: {
         mainTitle: "Débat Académique",
         overtime: "TEMPS DÉPASSÉ",
-        start: "Démarrer",
+        start: "Début",
         pause: "Pause",
-        resume: "Reprendre",
-        reset: "Réinitialiser",
+        reset: "Fin",
         initialLabel: "Temps initial :",
         minUnit: "min",
         secUnit: "sec",
@@ -558,8 +556,7 @@
         overtime: "ZEITÜBERSCHREITUNG",
         start: "Start",
         pause: "Pause",
-        resume: "Fortsetzen",
-        reset: "Zurücksetzen",
+        reset: "Ende",
         initialLabel: "Startzeit:",
         minUnit: "Min",
         secUnit: "Sek",
@@ -592,15 +589,13 @@
     let currentLang = 'en';
     let activeTab = 0;
 
-    // Independent timer state per tab
     const timers = DEFAULT_DURATIONS.map((secs) => ({
       initialSeconds: secs,
-      remainingSeconds: secs, // Negative values represent overtime count-up
+      remainingSeconds: secs,
       running: false,
       intervalId: null
     }));
 
-    // DOM Elements
     const tabsBar = document.getElementById('tabs-bar');
     const langSelect = document.getElementById('lang-select');
     const uiMainTitle = document.getElementById('ui-main-title');
@@ -610,6 +605,7 @@
     const timerDisplay = document.getElementById('timer-display');
     const progressBar = document.getElementById('progress-bar');
     const btnStart = document.getElementById('btn-start');
+    const btnPause = document.getElementById('btn-pause');
     const btnReset = document.getElementById('btn-reset');
     const uiInitialLabel = document.getElementById('ui-initial-label');
     const uiMinUnit = document.getElementById('ui-min-unit');
@@ -618,7 +614,6 @@
     const inputSecs = document.getElementById('input-secs');
     const btnApply = document.getElementById('btn-apply');
 
-    // Simple subtle chime when reaching 00:00
     function playZeroBell() {
       try {
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -632,9 +627,7 @@
         gain.connect(ctx.destination);
         osc.start();
         osc.stop(ctx.currentTime + 0.85);
-      } catch (e) {
-        // Ignore if audio context is blocked before interaction
-      }
+      } catch (e) {}
     }
 
     function formatTime(totalSeconds) {
@@ -678,29 +671,18 @@
       uiMinUnit.textContent = t.minUnit;
       uiSecUnit.textContent = t.secUnit;
       btnApply.textContent = t.setTime;
+      btnStart.textContent = t.start;
+      btnPause.textContent = t.pause;
       btnReset.textContent = t.reset;
 
-      // Update Start/Pause/Resume button
-      if (state.running) {
-        btnStart.textContent = t.pause;
-        btnStart.className = 'btn btn-pause';
-      } else {
-        const isPristine = state.remainingSeconds === state.initialSeconds;
-        btnStart.textContent = isPristine ? t.start : t.resume;
-        btnStart.className = 'btn btn-start';
-      }
-
-      // Overtime red styling
       if (isOvertime) {
         timerCard.classList.add('overtime-mode');
       } else {
         timerCard.classList.remove('overtime-mode');
       }
 
-      // Digital clock readout
       timerDisplay.textContent = formatTime(state.remainingSeconds);
 
-      // Progress bar percentage
       if (isOvertime || state.initialSeconds === 0) {
         progressBar.style.width = '100%';
       } else {
@@ -719,19 +701,11 @@
       updateDisplay();
     }
 
-    function toggleTimer() {
+    function startTimer() {
       const state = timers[activeTab];
-
-      if (state.running) {
-        clearInterval(state.intervalId);
-        state.running = false;
-        updateDisplay();
-        return;
-      }
+      if (state.running) return;
 
       state.running = true;
-      updateDisplay();
-
       state.intervalId = setInterval(() => {
         state.remainingSeconds -= 1;
         if (state.remainingSeconds === 0) {
@@ -739,6 +713,16 @@
         }
         updateDisplay();
       }, 1000);
+      updateDisplay();
+    }
+
+    function pauseTimer() {
+      const state = timers[activeTab];
+      if (!state.running) return;
+
+      clearInterval(state.intervalId);
+      state.running = false;
+      updateDisplay();
     }
 
     function resetTimer() {
@@ -768,8 +752,8 @@
       updateDisplay();
     }
 
-    // Event Listeners
-    btnStart.addEventListener('click', toggleTimer);
+    btnStart.addEventListener('click', startTimer);
+    btnPause.addEventListener('click', pauseTimer);
     btnReset.addEventListener('click', resetTimer);
     btnApply.addEventListener('click', applyCustomTime);
 
@@ -778,14 +762,12 @@
       updateDisplay();
     });
 
-    // Allow pressing Enter inside the time inputs
     [inputMins, inputSecs].forEach((input) => {
       input.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') applyCustomTime();
       });
     });
 
-    // Initialize UI
     switchTab(0);
   </script>
 </body>
